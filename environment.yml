@@ -1,0 +1,17 @@
+name: watchful-woof
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11.4
+  - nltk=3.8.1
+  - conda-forge::torchinfo>=1.8.0,<2.0
+  - pytorch::pytorch
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  - pytorch::pytorch-cuda=12.1
+  - pip
+  - pip:
+      - contractions>=0.1.73
