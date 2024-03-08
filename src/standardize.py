@@ -1,4 +1,8 @@
 import re
+from nltk.stem.snowball import SnowballStemmer
+import nltk
+import contractions
+from typing import Callable
 
 
 # Standardize
@@ -63,3 +67,10 @@ def standardize_text(text, stemmer, contractions):
     txt = txt.strip()
 
     return txt
+
+
+def standardizer_builder() -> Callable:
+    nltk.download("punkt")
+    stemmer = SnowballStemmer("english")
+
+    return lambda text: standardize_text(text, stemmer.stem, contractions)

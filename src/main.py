@@ -1,5 +1,6 @@
 import json
 import random
+from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -12,78 +13,48 @@ from transformer_block import TransformerBlock
 from model import TransformerModel
 from train import Trainer
 
-import nltk
-from nltk.stem.snowball import SnowballStemmer
-import contractions
-from standardize import standardize_text
+from standardize import standardizer_builder
+
+from utils import cuda_device_status, raw_data_stats, separate_data
 
 
 def main():
     # Environment
-    nltk.download('punkt')
-
     seed = 27
     random.seed(seed)
 
-    torch.cuda.is_available()
-    torch.cuda.device_count()
-    torch.cuda.current_device()
+    cuda_device_status()
 
-    # Load Data
-    file_path = "../data/ahk_dataset_v2.json"
-    with open(file_path, 'r', encoding='utf-8') as file:
+    # Load data
+    file_path = "./data/ahk_dataset_v2.json"
+    with open(file_path, 'r', encoding="utf-8") as file:
         data = json.load(file)
 
-    # Data Statistics
-    help_count = 0
-    rule_five_count = 0
-    normal_count = 0
-
-    for dp in data:
-        if dp["help"] == True and dp["rule5"] == False:
-            help_count += 1
-        elif dp["rule5"]:
-            rule_five_count += 1
-        else:
-            normal_count += 1
-
-    total = help_count + rule_five_count + normal_count
-
-    print(f"There are \t{help_count}\t help samples \t\t({(help_count / total) * 100:.2f} %)")
-    print(f"\t\t\t{rule_five_count}\t\t rule five samples \t({(rule_five_count / total) * 100:.2f} %)")
-    print(f"\t\t\t{normal_count}\t normal samples \t({(normal_count / total) * 100:.2f} %)")
-
-    print(f"\nTotal: {total}")
-    print(data[7110]["text"])
+    # Raw data stats
+    raw_data_stats(data)
 
     # Standardize
-    stemmer = SnowballStemmer("english")
-    standardizer = lambda x: standardize_text(x, stemmer.stem, contractions)
+    print("Initializing text standardizer...")
+    standardizer: Callable = standardizer_builder()
 
-    print(data[7110]["text"])
-
+    print("Standardizing text data...")
     for dp in data:
         dp["text"] = standardizer(dp["text"])
 
-    print(data[7110]["text"])
+    print("\n")
+    print("Sample:")
+    print(f"\t{data[7100]['text']}")
+    print("Standardized text:")
+    print(f"\t{data[7100]['text']}")
+    print("\n")
 
     # Separate Data
-    texts = []
-    labels = []
+    texts, labels = separate_data(data)
 
-    for dp in data:
-        texts.append(dp["text"])
-
-        help_dp = dp["help"]
-        rule5_dp = dp["rule5"]
-
-        if rule5_dp or help:
-            labels.append([0, int(help_dp), int(rule5_dp)])
-        else:
-            labels.append([1, 0, 0])
-
-    print(texts[7110])
-    print(labels[7110])
+    print("Separated data:")
+    print(f"\t{texts[7100]}")
+    print(f"\t{labels[7100]}")
+    print("\n")
 
     # Build Dataset
     ahk_dataset = CustomDataset(texts, labels)
@@ -101,13 +72,14 @@ def main():
         generator=generator
     )
 
-    print(f"Training: \t{len(train_dataset)}")
+    print("Dataset proportions:")
+    print(f"Training: \t\t{len(train_dataset)}")
     print(f"Validation: \t{len(val_dataset)}")
-    print(f"Test: \t\t{len(test_dataset)}")
+    print(f"Test: \t\t\t{len(test_dataset)}")
+    print("\n")
 
     # Data Loaders
     batch_size = 400
-
     num_workers = 8
     prefetch = 40  # batches
     pin_memory = True  # https://pytorch.org/docs/stable/data.html#memory-pinning
@@ -192,8 +164,10 @@ def main():
 
     test_tblock_out = test_tblock(test_emb_out)
 
+    print("Transformer block test:")
     print(test_tblock_out.shape)
     print(test_tblock_out.dtype)
+    print("\n")
 
     # Model params
     max_tokens = 150
