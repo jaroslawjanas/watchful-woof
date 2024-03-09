@@ -225,11 +225,11 @@ def main():
     )
 
     # Post training test
-    sample = "Can someone help with an ahk script?"
-    std_sample = standardizer(sample)
+    sample = ["Can someone help with an ahk script?"]
+    std_sample = standardize_parallel(sample)
     print(std_sample)
 
-    model([std_sample])
+    model(std_sample)
 
 
 if __name__ == "__main__":
