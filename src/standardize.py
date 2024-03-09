@@ -1,8 +1,8 @@
 import re
 from nltk.stem.snowball import SnowballStemmer
 import nltk
-import contractions
-from typing import Callable
+from multiprocessing import Pool
+from functools import partial
 
 
 # Standardize
@@ -40,7 +40,9 @@ def compress_whitespace(text):
     return re.sub(r"\s+", " ", text)
 
 
-def standardize_text(text, stemmer, contractions):
+def standardize_text(text, stemmer):
+    import contractions
+
     txt = text.lower()
 
     txt = remove_urls(txt)
@@ -69,8 +71,13 @@ def standardize_text(text, stemmer, contractions):
     return txt
 
 
-def standardizer_builder() -> Callable:
+def standardize_parallel(text_list, workers=12):
     nltk.download("punkt")
     stemmer = SnowballStemmer("english")
 
-    return lambda text: standardize_text(text, stemmer.stem, contractions)
+    standardizer_with_args = partial(standardize_text, stemmer=stemmer.stem)
+
+    with Pool(processes=workers) as pool:
+        output = pool.map(standardizer_with_args, text_list)
+
+    return output

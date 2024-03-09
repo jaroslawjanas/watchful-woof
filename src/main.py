@@ -1,6 +1,7 @@
 import json
 import random
 from typing import Callable
+import time
 
 import torch
 import torch.nn as nn
@@ -13,8 +14,7 @@ from transformer_block import TransformerBlock
 from model import TransformerModel
 from train import Trainer
 
-from standardize import standardizer_builder
-
+from standardize import standardize_parallel
 from utils import cuda_device_status, raw_data_stats, separate_data
 
 
@@ -33,27 +33,27 @@ def main():
     # Raw data stats
     raw_data_stats(data)
 
-    # Standardize
-    print("Initializing text standardizer...")
-    standardizer: Callable = standardizer_builder()
-
-    print("Standardizing text data...")
-    for dp in data:
-        dp["text"] = standardizer(dp["text"])
-
-    print("\n")
-    print("Sample:")
-    print(f"\t{data[7100]['text']}")
-    print("Standardized text:")
-    print(f"\t{data[7100]['text']}")
-    print("\n")
-
     # Separate Data
     texts, labels = separate_data(data)
 
     print("Separated data:")
     print(f"\t{texts[7100]}")
     print(f"\t{labels[7100]}")
+    print("\n")
+
+    print("Standardizing text data...")
+    start_time = time.time()
+    texts = standardize_parallel(texts, workers=8)
+
+    end_time = time.time()
+    elapsed_time = round(end_time - start_time, 2)
+    print(f"Done! Took {elapsed_time} seconds.")
+
+    print("\n")
+    print("Sample:")
+    print(f"\t{texts[7100]}")
+    print("Standardized text:")
+    print(f"\t{texts[7100]}")
     print("\n")
 
     # Build Dataset
