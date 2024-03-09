@@ -71,7 +71,7 @@ def standardize_text(text, stemmer):
     return txt
 
 
-def standardize_parallel(text_list, workers=12):
+def standardize_parallel(text_list, workers=8):
     nltk.download("punkt")
     stemmer = SnowballStemmer("english")
 

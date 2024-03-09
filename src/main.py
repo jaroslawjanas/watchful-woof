@@ -43,7 +43,7 @@ def main():
 
     print("Standardizing text data...")
     start_time = time.time()
-    texts = standardize_parallel(texts, workers=8)
+    texts = standardize_parallel(texts)
 
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 2)
@@ -138,8 +138,7 @@ def main():
         "were spot on in the model's head."
     ]
 
-    for idx, sample in enumerate(samples):
-        samples[idx] = standardizer(sample)
+    samples = standardize_parallel(samples)
 
     vectorize_layer(samples)
 
