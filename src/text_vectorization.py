@@ -6,6 +6,7 @@ from collections import defaultdict
 class TextVectorization(nn.Module):
     def __init__(self, max_vocabulary, max_tokens):
         super(TextVectorization, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.max_tokens = max_tokens
         self.max_vocabulary = max_vocabulary
         self.word_dictionary = dict()
@@ -54,7 +55,7 @@ class TextVectorization(nn.Module):
 
     def forward(self, batch_x):
         try:
-            batch_text_vectors = torch.zeros((len(batch_x), self.max_tokens), dtype=torch.int32)
+            batch_text_vectors = torch.zeros((len(batch_x), self.max_tokens), dtype=torch.int32, device=self.device)
 
             for i, text in enumerate(batch_x):
 
@@ -67,4 +68,4 @@ class TextVectorization(nn.Module):
             return batch_text_vectors
 
         except IndexError:
-            print("Looks like you are out of indicies")
+            print("Looks like you are out of indices")

@@ -1,18 +1,16 @@
 import json
 import random
-from typing import Callable
 import time
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torch.optim import AdamW
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from custom_dataset import CustomDataset
 from text_vectorization import TextVectorization
-from embeddings import TokenAndPositionEmbedding
-from transformer_block import TransformerBlock
-from model import TransformerModel
-from train import Trainer
+from model import TransformerModel, LightningModelWrapper
+import lightning as L
 
 from standardize import standardize_parallel
 from utils import cuda_device_status, raw_data_stats, separate_data
@@ -22,6 +20,7 @@ def main():
     # Environment
     seed = 27
     random.seed(seed)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     cuda_device_status()
 
@@ -83,6 +82,7 @@ def main():
     num_workers = 8
     prefetch = 40  # batches
     pin_memory = True  # https://pytorch.org/docs/stable/data.html#memory-pinning
+    persistent = True
 
     train_loader = DataLoader(
         train_dataset,
@@ -90,16 +90,19 @@ def main():
         shuffle=True,
         num_workers=num_workers,
         prefetch_factor=prefetch,
-        pin_memory=pin_memory
+        pin_memory=pin_memory,
+        persistent_workers=persistent
     )
 
-    valid_loader = DataLoader(
+    val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
+
         num_workers=num_workers,
         prefetch_factor=prefetch,
-        pin_memory=pin_memory
+        pin_memory=pin_memory,
+        persistent_workers=persistent
     )
 
     test_loader = DataLoader(
@@ -108,7 +111,8 @@ def main():
         shuffle=False,
         num_workers=num_workers,
         prefetch_factor=prefetch,
-        pin_memory=pin_memory
+        pin_memory=pin_memory,
+        persistent_workers=persistent
     )
 
     # Text Vectorization
@@ -142,32 +146,6 @@ def main():
 
     vectorize_layer(samples)
 
-    # Test Embeddings
-    random_tokens = torch.randint(
-        low=0,
-        high=vectorize_layer.vocabulary_size(),
-        size=(batch_size, 150),
-        dtype=torch.int32
-    )
-
-    test_emb = TokenAndPositionEmbedding(150, vectorize_layer.vocabulary_size(), 16)
-    test_emb_out = test_emb(random_tokens)
-
-    # Test Transformer Block
-    test_tblock = TransformerBlock(
-        embed_dim=16,
-        num_heads=2,
-        ff_dim=32,
-        dropout=0.1
-    )
-
-    test_tblock_out = test_tblock(test_emb_out)
-
-    print("Transformer block test:")
-    print(test_tblock_out.shape)
-    print(test_tblock_out.dtype)
-    print("\n")
-
     # Model params
     max_tokens = 150
     vocab_size = vectorize_layer.vocabulary_size()
@@ -182,8 +160,8 @@ def main():
         embed_dim=embed_dim,
         num_heads=num_heads,
         ff_dim=ff_dim,
-        vectorize_layer=vectorize_layer
-    )
+        vectorize_layer=vectorize_layer,
+    ).to(device)
 
     # Model Test
     model.forward(
@@ -198,10 +176,12 @@ def main():
     learning_rate = 0.00003
     weight_decay = 0.001
     patience = 8
-    epochs = 50
+    min_epochs = 10
+    max_epochs = 50
+    precision = "16-mixed"
 
     # Train
-    pos_weights = torch.tensor([0, 50, 500])
+    pos_weights = torch.tensor([0, 50, 500], device=device)
     loss = nn.BCEWithLogitsLoss(pos_weight=pos_weights)
     # loss = nn.BCELoss()
 
@@ -211,25 +191,36 @@ def main():
         weight_decay=weight_decay
     )
 
-    model_trainer = Trainer(
-        epochs=epochs,
+    lr_scheduler = {
+        "scheduler": ReduceLROnPlateau(optimizer, mode="min", factor=0.1, patience=2), # get_last_lr()
+        "monitor": "val_loss",  # Name of the metric to monitor
+        "interval": "epoch",
+        "frequency": 1,
+    }
+
+    # model
+    lightning_model = LightningModelWrapper(
+        model=model,
         loss=loss,
         optimizer=optimizer,
-        patience=patience
+        lr_scheduler=lr_scheduler
     )
 
-    model_trainer.train(
-        model=model,
-        train_loader=train_loader,
-        valid_loader=valid_loader
+    # train model
+    trainer = L.Trainer(
+        accelerator="gpu",
+        max_epochs=max_epochs,
+        min_epochs=min_epochs,
+        precision=precision
     )
 
-    # Post training test
-    sample = ["Can someone help with an ahk script?"]
-    std_sample = standardize_parallel(sample)
-    print(std_sample)
+    trainer.fit(
+        model=lightning_model,
+        train_dataloaders=train_loader,
+        val_dataloaders=val_loader,
+    )
 
-    model(std_sample)
+    trainer.fit(lightning_model, train_loader, val_loader)
 
 
 if __name__ == "__main__":

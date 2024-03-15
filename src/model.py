@@ -1,6 +1,7 @@
 import torch.nn as nn
 from embeddings import TokenAndPositionEmbedding
 from transformer_block import TransformerBlock
+import lightning as L
 
 
 class TransformerModel(nn.Module):
@@ -32,3 +33,38 @@ class TransformerModel(nn.Module):
         x = self.fc2(x)
         x = self.softmax(x)
         return x
+
+
+class LightningModelWrapper(L.LightningModule):
+    def __init__(self, model, loss, optimizer, lr_scheduler):
+        super().__init__()
+        self.model = model
+        self.loss = loss
+        self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
+
+    def forward(self, x):
+        return self.model(x)
+
+    def training_step(self, batch, batch_idx):
+        # training_step defines the train loop.
+        x, y = batch
+        y_hat = self.model(x)
+        loss = self.loss(y_hat, y)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def configure_optimizers(self):
+        return [self.optimizer], [self.lr_scheduler]
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self.model(x)
+        val_loss = self.loss(y_hat, y)
+        self.log('val_loss', val_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self.model(x)
+        test_loss = self.loss(y_hat, y)
+        self.log("test_loss", test_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
