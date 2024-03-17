@@ -12,6 +12,7 @@ from text_vectorization import TextVectorization
 from model import TransformerModel, LightningModelWrapper
 import lightning as L
 from callbacks import TrainingStatus
+from lightning.pytorch.callbacks import RichProgressBar
 
 from standardize import standardize_parallel
 from utils import cuda_device_status, raw_data_stats, separate_data
@@ -213,7 +214,7 @@ def main():
         max_epochs=max_epochs,
         min_epochs=min_epochs,
         precision=precision,
-        callbacks=[TrainingStatus()],
+        callbacks=[TrainingStatus(), RichProgressBar(leave=True)],
     )
 
     trainer.fit(
