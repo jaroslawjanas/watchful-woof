@@ -11,6 +11,7 @@ from custom_dataset import CustomDataset
 from text_vectorization import TextVectorization
 from model import TransformerModel, LightningModelWrapper
 import lightning as L
+from callbacks import TrainingStatus
 
 from standardize import standardize_parallel
 from utils import cuda_device_status, raw_data_stats, separate_data
@@ -211,7 +212,8 @@ def main():
         accelerator="gpu",
         max_epochs=max_epochs,
         min_epochs=min_epochs,
-        precision=precision
+        precision=precision,
+        callbacks=[TrainingStatus()],
     )
 
     trainer.fit(
