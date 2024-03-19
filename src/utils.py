@@ -16,8 +16,8 @@ def raw_data_stats(data):
     total = help_count + rule_five_count + normal_count
 
     print(f"There are \t{help_count}\t help samples \t\t({(help_count / total) * 100:.2f} %)")
-    print(f"\t\t\t{rule_five_count}\t\t rule five samples \t({(rule_five_count / total) * 100:.2f} %)")
-    print(f"\t\t\t{normal_count}\t normal samples \t({(normal_count / total) * 100:.2f} %)")
+    print(f"\t\t{rule_five_count}\t rule five samples \t({(rule_five_count / total) * 100:.2f} %)")
+    print(f"\t\t{normal_count}\t normal samples \t({(normal_count / total) * 100:.2f} %)")
 
     print(f"\nTotal: {total}")
     print("\n")
