@@ -21,6 +21,8 @@ class TransformerModel(nn.Module):
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=1)
 
+        self.init_weights()
+
     def forward(self, x):
         x = self.vectorize_layer(x)
         x = self.embedding_layer(x)
@@ -33,6 +35,29 @@ class TransformerModel(nn.Module):
         x = self.fc2(x)
         x = self.softmax(x)
         return x
+
+    def init_weights(self):
+        print("Initializing weights...")
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+            elif isinstance(m, nn.LayerNorm):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+
+            elif isinstance(m, nn.Embedding):
+                nn.init.normal_(m.weight, mean=0, std=0.02)
+
+            elif isinstance(m, nn.MultiheadAttention):
+                nn.init.xavier_uniform_(m.in_proj_weight)
+                nn.init.xavier_uniform_(m.out_proj.weight)
+                if m.in_proj_bias is not None:
+                    nn.init.zeros_(m.in_proj_bias)
+                if m.out_proj.bias is not None:
+                    nn.init.zeros_(m.out_proj.bias)
 
 
 class LightningModelWrapper(L.LightningModule):
