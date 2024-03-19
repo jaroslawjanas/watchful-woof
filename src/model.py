@@ -46,12 +46,19 @@ class LightningModelWrapper(L.LightningModule):
     def forward(self, x):
         return self.model(x)
 
+    @staticmethod
+    def accuracy(outputs, labels, threshold=0.5):
+        predictions = (outputs > threshold).float()
+        accuracy = (predictions == labels).float().mean()
+        return accuracy
+
     def training_step(self, batch, batch_idx):
-        # training_step defines the train loop.
         x, y = batch
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
-        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        accuracy = self.accuracy(y_hat, y)
+        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def configure_optimizers(self):
@@ -61,10 +68,14 @@ class LightningModelWrapper(L.LightningModule):
         x, y = batch
         y_hat = self.model(x)
         val_loss = self.loss(y_hat, y)
-        self.log('val_loss', val_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        val_accuracy = self.accuracy(y_hat, y)
+        self.log("val_loss", val_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val_accuracy", val_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self.model(x)
         test_loss = self.loss(y_hat, y)
-        self.log("test_loss", test_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        test_accuracy = self.accuracy(y_hat, y)
+        self.log("test_loss", test_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test_accuracy", test_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
