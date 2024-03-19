@@ -1,13 +1,3 @@
-import torch
-
-
-def cuda_device_status():
-    if torch.cuda.is_available():
-        print("Detected CUDA devices")
-
-    print(f"Number of devices: {torch.cuda.device_count()}")
-    print(f"Current device: {torch.cuda.current_device()}")
-    print("\n")
 
 
 def raw_data_stats(data):

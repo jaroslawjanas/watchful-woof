@@ -15,7 +15,7 @@ from callbacks import TrainingStatus
 from lightning.pytorch.callbacks import RichProgressBar
 
 from standardize import standardize_parallel
-from utils import cuda_device_status, raw_data_stats, separate_data
+from utils import raw_data_stats, separate_data
 
 
 def main():
@@ -23,8 +23,6 @@ def main():
     seed = 27
     random.seed(seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    cuda_device_status()
 
     # Load data
     file_path = "./data/ahk_dataset_v2.json"
